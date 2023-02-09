@@ -39,7 +39,7 @@ jobs:
     steps:
       - name: Get tag name
         id: git-tag
-        run: echo "git-version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: echo "git-version=${GITHUB_REF#refs/tags/}" >> "${GITHUB_OUTPUT}"
 
       # Get the latest sources
       - name: Checkout
