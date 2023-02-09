@@ -39,7 +39,7 @@ jobs:
     steps:
       - name: Get tag name
         id: git-tag
-        run: echo ::set-output name=git-version::${GITHUB_REF/refs\/tags\//}
+        run: echo ::set-output name=git-version::${GITHUB_REF#refs/tags/}
 
       # Get the latest sources
       - name: Checkout
