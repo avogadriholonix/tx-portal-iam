@@ -39,8 +39,7 @@ jobs:
     steps:
       - name: Get tag name
         id: git-tag
-      #  run: echo "git-version=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-        run: echo "git-version="test"}" >> $GITHUB_ENV
+        run: echo "git-version=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       # Get the latest sources
       - name: Checkout
@@ -66,5 +65,6 @@ jobs:
           context: .
           file: docker/Dockerfile.dev.import
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.git-version }}, ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          #tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.git-version }}, ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags:  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           labels: ${{ steps.meta.outputs.labels }}
