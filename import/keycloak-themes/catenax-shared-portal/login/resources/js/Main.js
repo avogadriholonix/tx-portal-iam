@@ -56,6 +56,14 @@ const clear = (n) => {
     return n
 }
 
+const wrap = (c, p) => {
+    const parent = c.parentElement
+    parent.insertBefore(p, c)
+    parent.removeChild(c)
+    p.appendChild(c)
+    return c
+}
+
 const addEvents = (node, evts) => {
     Object.keys(evts).forEach((key) => node.addEventListener(key, evts[key]))
     return node
@@ -78,7 +86,10 @@ class Viewable {
     }
 
     detach() {
-        this.view.parentElement.removeChild(this.view)
+        try {
+            this.view.parentElement.removeChild(this.view)
+        } catch (e) {
+        }
         return this
     }
 
@@ -116,13 +127,54 @@ class Card extends Viewable {
 
 class Form extends Viewable {
 
+    static fromPage() {
+        try {
+            const form = document.getElementsByTagName('form').item(0)
+            switch (form.id) {
+                case 'kc-form-login': return new FormLogin(form)
+                case 'kc-passwd-update-form': return new FormOtp(form)
+                case 'kc-reset-passwd-form': return new FormReset(form)
+            }
+        } catch (e) {
+            return null
+        }
+    }
+
     constructor(form) {
         super()
         this.view = form
+    }
+
+    appendPasswordButton(password) {
+        const toggle = addEvents(
+            N('div', null, { class: 'hidden' }),
+            {
+                click: ((e) => {
+                    e.preventDefault()
+                    const input = e.currentTarget.previousSibling
+                    const isHidden = input.getAttribute('type') === 'password'
+                    input.setAttribute('type', isHidden ? 'text' : 'password')
+                    e.currentTarget.className = isHidden ? 'visible' : 'hidden'
+                    //document.getElementById('password').focus()
+                }).bind(this)
+            }
+        )
+        const wrapper = N('div', null, { class: 'pwwrapper' })
+        wrap(password, wrapper)
+        wrapper.appendChild(toggle)
+        return this
+    }
+
+}
+
+class FormLogin extends Form {
+
+    constructor(form) {
+        super(form)
         this.adjustSequence()
         setTimeout((() => {
             document.getElementById('username').focus()
-            this.appendPasswordButton()
+            this.appendPasswordButton(document.getElementById('password'))
         }).bind(this), 300)
     }
 
@@ -130,40 +182,51 @@ class Form extends Viewable {
         const forgot = [...this.view.children][2]
         this.view.removeChild(forgot)
         this.view.appendChild(forgot)
-        return this
-    }
-
-    appendPasswordButton() {
-        this.passwordVisible = addEvents(
-            N('button', null, { class: 'hidden' }),
-            {
-                click: ((e) => {
-                    e.preventDefault()
-                    const isHidden = this.password.getAttribute('type') === 'password'
-                    this.password.setAttribute('type', isHidden ? 'text' : 'password')
-                    this.passwordVisible.className = isHidden ? 'visible' : 'hidden'
-                    document.getElementById('password').focus()
-                }).bind(this)
-            }
+        const links = [...forgot.getElementsByTagName('a')]
+        if (links.length === 0)
+            return
+        const parent = links[links.length - 1].parentElement
+        parent.appendChild(
+            addEvents(
+                N('a', 'Sign in with another company', { href: '#' }),
+                {
+                    click: (e) => {
+                        e.preventDefault()
+                        history.back()
+                    }
+                }
+            )
         )
-        const password = document.getElementById('password')
-        const parent = password.parentElement
-        const wrapper = N('div', null, { class: 'pwwrapper' })
-        parent.insertBefore(wrapper, password)
-        parent.removeChild(password)
-        wrapper.appendChild(password)
-        wrapper.appendChild(this.passwordVisible)
-        this.password = password
         return this
     }
 
 }
 
-class Login extends Viewable {
+class FormOtp extends Form {
 
     constructor(form) {
+        super(form)
+        setTimeout((() => {
+            this.appendPasswordButton(document.getElementById('password-new'))
+            this.appendPasswordButton(document.getElementById('password-confirm'))
+        }).bind(this), 300)
+    }
+
+}
+
+class FormReset extends Form {
+
+    constructor(form) {
+        super(form)
+    }
+
+}
+
+class Section extends Viewable {
+
+    constructor() {
         super()
-        this.view = N('section', null, { class: 'login' })
+        this.view = N('section')
     }
 
 }
@@ -193,11 +256,10 @@ class App extends Viewable {
 
 class Header extends Viewable {
 
-    constructor(name) {
+    constructor(title) {
         super()
         this.view = N('header', [
-            N('h1', name),
-            N('h3', 'Sign in to your account')
+            N('h3', title)
         ])
     }
 
@@ -228,17 +290,17 @@ addEvents(
     window,
     {
         load: () => {
-            const name = document.getElementById('kc-header-wrapper').firstChild.data
-            const form = new Form(
-                document.getElementById('kc-form-login')
-            ).detach()
+            const title = document.getElementsByTagName('h1').item(0).firstChild.data
+            const realm = document.getElementById('kc-header-wrapper').firstChild.data
+            const content = document.getElementById('kc-content')
+            const form = Form.fromPage()
             new App(true)
-                .append(new Header(name))
+                .append(new Header(title).append(content))
                 .append(
                     new Main().append(
-                        new Login()
-                            .append(new Card(name))
-                            .append(form)
+                        new Section()
+                            .append(new Card(realm))
+                            .append(form || content)
                     )
                 )
                 .append(new Footer())
